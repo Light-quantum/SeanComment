@@ -24,4 +24,4 @@ mybatis-plus:
   type-aliases-package: com.sean.comment.entity # 别名扫描包
 logging:
   level:
-    com.hmdp: debug
+    com.sean.comment: debug
