@@ -1,7 +1,10 @@
 package com.sean.comment.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.sean.comment.dto.Result;
 import com.sean.comment.entity.User;
+
+import javax.servlet.http.HttpSession;
 
 /**
  * <p>
@@ -13,4 +16,5 @@ import com.sean.comment.entity.User;
  */
 public interface IUserService extends IService<User> {
 
+    Result sendCode(String phone, HttpSession session);
 }
