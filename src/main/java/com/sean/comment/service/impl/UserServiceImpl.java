@@ -13,7 +13,7 @@ import org.springframework.stereotype.Service;
 
 import javax.servlet.http.HttpSession;
 
-import static com.sean.comment.utils.SystemConstants.USER_NICK_NAME_PREFIX;
+import static com.sean.comment.utils.SystemConstants.*;
 
 /**
  * <p>
@@ -35,7 +35,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         // 生成验证码
         final String code = RandomUtil.randomNumbers(6);
         // 保存验证码到 Session
-        session.setAttribute("code", code);
+        session.setAttribute(VERIFICATION_CODE, code);
         // 发送验证码
         // TODO 调用第三方短信服务 API 发送验证码
         log.debug("验证码发送成功，验证码：" + code);
@@ -52,7 +52,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
             return Result.fail("手机号格式错误");
         }
         // 校验验证码
-        final String cacheCode = (String)session.getAttribute("code");
+        final String cacheCode = (String)session.getAttribute(VERIFICATION_CODE);
         final String code = loginForm.getCode();
         if(StringUtils.isBlank(code) || !StringUtils.equals(code, cacheCode)){
             // 验证码不一致，返回错误信息
@@ -66,7 +66,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
             user = createUserWithPhone(phone);
         }
         // 保存用户到 session
-        session.setAttribute("user", user);
+        session.setAttribute(LOGIN_USER, user);
         // 不需要返回登录凭证，因为 session 基于 cookie
         // 每次请求都会携带 sessionID，找到 session 自然找到用户
         // 返回 ok

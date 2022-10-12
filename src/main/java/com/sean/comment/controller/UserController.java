@@ -3,9 +3,11 @@ package com.sean.comment.controller;
 
 import com.sean.comment.dto.LoginFormDTO;
 import com.sean.comment.dto.Result;
+import com.sean.comment.dto.UserDTO;
 import com.sean.comment.entity.UserInfo;
 import com.sean.comment.service.IUserInfoService;
 import com.sean.comment.service.IUserService;
+import com.sean.comment.utils.UserHolder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
@@ -62,8 +64,9 @@ public class UserController {
 
     @GetMapping("/me")
     public Result me(){
-        // TODO 获取当前登录的用户并返回
-        return Result.fail("功能未完成");
+        // 获取当前登录的用户并返回
+        final UserDTO user = UserHolder.getUser();
+        return Result.ok(user);
     }
 
     @GetMapping("/info/{id}")
