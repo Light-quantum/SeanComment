@@ -9,10 +9,15 @@ import com.sean.comment.mapper.UserMapper;
 import com.sean.comment.service.IUserService;
 import com.sean.comment.utils.RegexUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import javax.servlet.http.HttpSession;
 
+import java.util.concurrent.TimeUnit;
+
+import static com.sean.comment.utils.RedisConstants.*;
 import static com.sean.comment.utils.SystemConstants.*;
 
 /**
@@ -23,19 +28,31 @@ import static com.sean.comment.utils.SystemConstants.*;
  * @author 虎哥
  * @since 2021-12-22
  */
+@SuppressWarnings("all")
 @Service
 public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IUserService {
+    @Autowired
+    private StringRedisTemplate stringRedisTemplate;
     @Override
     public Result sendCode(String phone, HttpSession session) {
+        // 检测是否存在锁
+        // if(stringRedisTemplate.hasKey(LOGIN_CODE_LOCK + phone)
+        //         && stringRedisTemplate.getExpire(LOGIN_CODE_LOCK + phone) > 0){
+        //     return Result.fail("获取验证码速度过快，请稍后重试");
+        // }
         // 校验手机号 （通过自定义的正则表达式校验）
         if(RegexUtils.isPhoneInvalid(phone)){
             // 不符合返回错误信息
             return Result.fail("手机号格式错误");
         }
+        // 加锁防止同时获取验证码, login:code:phone = lock 有效期 1 min
+        // stringRedisTemplate.opsForValue().set(LOGIN_CODE_LOCK + phone, "lock", LOGIN_CODE_LOCK_TTL, TimeUnit.MINUTES);
         // 生成验证码
         final String code = RandomUtil.randomNumbers(6);
         // 保存验证码到 Session
-        session.setAttribute(VERIFICATION_CODE, code);
+        // session.setAttribute(VERIFICATION_CODE, code);
+        // 将验证码存到 redis 中. login:code:phone = code 有效期 5 min
+        stringRedisTemplate.opsForValue().set(LOGIN_CODE_KEY + phone, code, LOGIN_CODE_TTL, TimeUnit.MINUTES);
         // 发送验证码
         // TODO 调用第三方短信服务 API 发送验证码
         log.debug("验证码发送成功，验证码：" + code);
