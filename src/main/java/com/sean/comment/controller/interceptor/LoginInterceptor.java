@@ -1,6 +1,7 @@
 package com.sean.comment.controller.interceptor;
 
 
+import cn.hutool.core.bean.BeanUtil;
 import com.sean.comment.dto.UserDTO;
 import com.sean.comment.entity.User;
 import com.sean.comment.utils.UserHolder;
@@ -23,11 +24,11 @@ public class LoginInterceptor implements HandlerInterceptor {
             return false;
         }
         // 保存用户到 ThreadLocal 中
-        UserDTO userDTO = new UserDTO();
-        userDTO.setId(user.getId());
-        userDTO.setNickName(user.getNickName());
-        userDTO.setIcon(user.getIcon());
-        UserHolder.saveUser(userDTO);
+//        UserDTO userDTO = new UserDTO();
+//        userDTO.setId(user.getId());
+//        userDTO.setNickName(user.getNickName());
+//        userDTO.setIcon(user.getIcon());
+        UserHolder.saveUser(BeanUtil.copyProperties(user, UserDTO.class));
         // 放行
         return true;
     }
