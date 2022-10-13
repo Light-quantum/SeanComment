@@ -1,9 +1,13 @@
 package com.sean.comment.service.impl;
 
+import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.bean.copier.CopyOptions;
+import cn.hutool.core.lang.UUID;
 import cn.hutool.core.util.RandomUtil;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.sean.comment.dto.LoginFormDTO;
 import com.sean.comment.dto.Result;
+import com.sean.comment.dto.UserDTO;
 import com.sean.comment.entity.User;
 import com.sean.comment.mapper.UserMapper;
 import com.sean.comment.service.IUserService;
@@ -15,6 +19,8 @@ import org.springframework.stereotype.Service;
 
 import javax.servlet.http.HttpSession;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import static com.sean.comment.utils.RedisConstants.*;
@@ -69,7 +75,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
             return Result.fail("手机号格式错误");
         }
         // 校验验证码
-        final String cacheCode = (String)session.getAttribute(VERIFICATION_CODE);
+        // final String cacheCode = (String)session.getAttribute(VERIFICATION_CODE);
+        // 从 redis 中获取验证码
+        final String cacheCode = stringRedisTemplate.opsForValue().get(LOGIN_CODE_KEY + phone);
         final String code = loginForm.getCode();
         if(StringUtils.isBlank(code) || !StringUtils.equals(code, cacheCode)){
             // 验证码不一致，返回错误信息
@@ -83,11 +91,23 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
             user = createUserWithPhone(phone);
         }
         // 保存用户到 session
-        session.setAttribute(LOGIN_USER, user);
-        // 不需要返回登录凭证，因为 session 基于 cookie
-        // 每次请求都会携带 sessionID，找到 session 自然找到用户
+        // session.setAttribute(LOGIN_USER, user);
+
+        // 保存用户到 redis
+        // 生成登录令牌
+        String token = UUID.randomUUID().toString(true  );
+        // User 转为 Hash 存储
+        UserDTO userDTO = BeanUtil.copyProperties(user, UserDTO.class);
+        // 将 UserDTO 全部转为 String - String
+        final Map<String, Object> map = BeanUtil.beanToMap(user, new HashMap<>(),
+                CopyOptions.create()
+                        .setIgnoreNullValue(true)
+                        .setFieldValueEditor((fielName, fielValue)-> fielValue.toString()));
+        stringRedisTemplate.opsForHash().putAll(LOGIN_USER_KEY + token, map);
+        // 设置有效期 30 分钟，但这里似乎有问题，set 和 设置有效期不是同时的
+        stringRedisTemplate.expire(LOGIN_USER_KEY + token, LOGIN_USER_TTL, TimeUnit.MINUTES);
         // 返回 ok
-        return Result.ok();
+        return Result.ok(token);
     }
 
     private User createUserWithPhone(String phone) {
