@@ -1,5 +1,6 @@
 package com.sean.comment.service;
 
+import com.sean.comment.dto.Result;
 import com.sean.comment.entity.ShopType;
 import com.baomidou.mybatisplus.extension.service.IService;
 
@@ -13,4 +14,5 @@ import com.baomidou.mybatisplus.extension.service.IService;
  */
 public interface IShopTypeService extends IService<ShopType> {
 
+    Result getShopTypeList();
 }
