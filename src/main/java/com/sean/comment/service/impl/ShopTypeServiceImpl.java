@@ -7,6 +7,9 @@ import com.sean.comment.mapper.ShopTypeMapper;
 import com.sean.comment.service.IShopTypeService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
+import org.springframework.data.redis.core.RedisOperations;
+import org.springframework.data.redis.core.SessionCallback;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -54,13 +57,18 @@ public class ShopTypeServiceImpl extends ServiceImpl<ShopTypeMapper, ShopType> i
             return Result.fail("不存在任何商铺类型！");
         }
         // 5. 数据库存在，写缓存
-        redisTemplate.multi();  // 开启事务
-        redisTemplate.opsForList().rightPushAll(CACHE_SHOP_TYPE_KEY,
-                typeList.stream().map(i-> JSONUtil.toJsonStr(i)).collect(Collectors.toList()));
-        redisTemplate.expire(CACHE_SHOP_TYPE_KEY, CACHE_SHOP_TYPE_TTL, TimeUnit.MINUTES);
-        final List<Object> exec = redisTemplate.exec(); // 提交事务
+        final Object execute = redisTemplate.execute(new SessionCallback<Object>() {
+            @Override
+            public <K, V> Object execute(RedisOperations<K, V> operations) throws DataAccessException {
+                operations.multi();  // 开启事务
+                redisTemplate.opsForList().rightPushAll(CACHE_SHOP_TYPE_KEY,
+                        typeList.stream().map(i -> JSONUtil.toJsonStr(i)).collect(Collectors.toList()));
+                redisTemplate.expire(CACHE_SHOP_TYPE_KEY, CACHE_SHOP_TYPE_TTL, TimeUnit.MINUTES);
+                return operations.exec(); // 提交事务
+            }
+        });
         // 6. 返回
-        if(null == exec){
+        if(null == execute){
             return Result.fail("设置缓存失败!");
         }
         return Result.ok(typeList);
