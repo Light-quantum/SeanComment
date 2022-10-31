@@ -10,6 +10,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.concurrent.TimeUnit;
 
@@ -50,5 +51,21 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
         redisTemplate.opsForValue().set(redisKey, JSONUtil.toJsonStr(shop), CACHE_SHOP_TTL, TimeUnit.MINUTES);
         // 8. 返回
         return Result.ok(shop);
+    }
+
+    @Override
+    @Transactional  // 事务保证更新数据和删除缓存操作的一致性。分布式系统需要借助 TCC 实现一致性
+    public Result updateShopById(Shop shop) {
+        // 参数验证
+        if(null == shop || null == shop.getId()){
+            return Result.fail("店铺信息错误!");
+        }
+        // 更新数据库
+        System.out.println(shop.getName());
+        updateById(shop);
+        // 删除缓存
+        String redisKey = CACHE_SHOP_KEY + shop.getId();
+        redisTemplate.delete(redisKey);
+        return Result.ok();
     }
 }

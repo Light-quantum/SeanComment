@@ -9,6 +9,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collections;
 import java.util.List;
@@ -33,6 +34,10 @@ public class ShopTypeServiceImpl extends ServiceImpl<ShopTypeMapper, ShopType> i
     @Autowired
     private StringRedisTemplate redisTemplate;
 
+    /**
+     * 查询商品类型列表
+     * @return
+     */
     @Override
     public Result getShopTypeList() {
         // 1. 查询缓存
@@ -49,10 +54,15 @@ public class ShopTypeServiceImpl extends ServiceImpl<ShopTypeMapper, ShopType> i
             return Result.fail("不存在任何商铺类型！");
         }
         // 5. 数据库存在，写缓存
+        redisTemplate.multi();  // 开启事务
         redisTemplate.opsForList().rightPushAll(CACHE_SHOP_TYPE_KEY,
                 typeList.stream().map(i-> JSONUtil.toJsonStr(i)).collect(Collectors.toList()));
         redisTemplate.expire(CACHE_SHOP_TYPE_KEY, CACHE_SHOP_TYPE_TTL, TimeUnit.MINUTES);
+        final List<Object> exec = redisTemplate.exec(); // 提交事务
         // 6. 返回
+        if(null == exec){
+            return Result.fail("设置缓存失败!");
+        }
         return Result.ok(typeList);
     }
 }
